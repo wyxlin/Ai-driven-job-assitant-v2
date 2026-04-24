@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import List
 
+from core.models import upsert_jobs
+
 # Fixture data simulating Greenhouse / Lever API responses.
 # Mix of Seattle-area, Remote, and out-of-area jobs to exercise the filter.
 _FIXTURE_JOBS: List[dict] = [
@@ -90,6 +92,13 @@ _FIXTURE_JOBS: List[dict] = [
 ]
 
 
-def fetch_jobs() -> List[dict]:
-    """Return fixture job records as if fetched from Greenhouse/Lever."""
+def fetch_raw_jobs(endpoint: str = "") -> List[dict]:
+    """Stub: ignores *endpoint*, returns fixture job records."""
     return list(_FIXTURE_JOBS)
+
+
+def ingest_all(endpoint: str = "") -> int:
+    """Fetch jobs from *endpoint* and persist via upsert. Returns count ingested."""
+    jobs = fetch_raw_jobs(endpoint)
+    upsert_jobs(jobs)
+    return len(jobs)
