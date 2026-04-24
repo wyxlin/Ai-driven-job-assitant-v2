@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current Module
-Wave 2 — Filter Engine + LLM Router
+Wave 3 — Vetting Service + Fetcher
 
 ## Status
-Wave 1 COMPLETE (Codex PASS, pushed). Wave 2 not started.
+Wave 2 COMPLETE (commit: 15eeedb). Awaiting Codex review before push.
 
 ## Completed Work
 - [x] Directory structure (`core/`, `services/`, `tests/`)
@@ -16,15 +16,15 @@ Wave 1 COMPLETE (Codex PASS, pushed). Wave 2 not started.
 - [x] Public interfaces: `init_db()`, `upsert_jobs()`, `get_pending_jobs()`, `get_session()`
 - [x] Codex Round 1 review received (3 findings)
 - [x] All 3 findings fixed and committed locally (commit: 370775b)
+- [x] Wave 1 pushed after Codex PASS
+- [x] `services/engine.py` — FilterEngine: `is_location_match()` + `run_filter_pass()`
+- [x] `services/router.py` — LLMRouter: Gemini→GPT-4o-mini→Claude Haiku failover with retry
 
 ## Known Issues
-None open. Three Codex findings resolved:
-- [FIXED] `_structured_data_column()` now uses `JSON().with_variant(JSONB(), "postgresql")` — dialect-safe
-- [FIXED] SQLite upsert now uses `on_conflict_do_nothing(index_elements=["external_id"])` — scope-correct
-- [FIXED] `config.py` now supports `ENV_FILE` env var for test isolation
+None open.
 
 ## Context Status
-Active — Wave 1 window
+Active — Wave 2 window (awaiting Codex verdict)
 
 ## Next Step
-Begin Wave 2: implement `services/engine.py` + `services/router.py` in parallel
+Codex review Wave 2. On PASS: push, then begin Wave 3 (vetting.py + fetcher.py).
