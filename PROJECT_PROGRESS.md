@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current Module
-Wave 4 — Entry Point + Tests
+—— All waves complete ——
 
 ## Status
-Wave 3 COMPLETE (pushed: 497e001). Codex PASS. Wave 4 not started.
+Wave 4 COMPLETE (pushed: 29bb900). Codex PASS. Project at v1.0.
 
 ## Completed Work
 - [x] Directory structure (`core/`, `services/`, `tests/`)
@@ -18,12 +18,15 @@ Wave 3 COMPLETE (pushed: 497e001). Codex PASS. Wave 4 not started.
 - [x] `services/router.py` — LLMRouter: Gemini→GPT-4o-mini→Claude Haiku failover with retry
 - [x] `services/fetcher.py` — `fetch_raw_jobs(endpoint)` stub + `ingest_all(endpoint)`
 - [x] `services/vetting.py` — `VettingService.process_batch(batch_size)`, DB resume load, MAX_JOBS_PER_RUN cap
+- [x] `app.py` — CLI: `fetch` / `filter` / `vet` subcommands
+- [x] `tests/conftest.py` — in-memory SQLite, session-scoped engine, per-test table reset
+- [x] `tests/test_models.py` — Suite A: upsert, idempotency, get_pending_jobs
+- [x] `tests/test_filters.py` — Suite B: TS-B01/B02/B03, run_filter_pass integration
+- [x] `tests/test_router.py` — Suite C: TS-C01/C02/C03/C04, _is_rate_limited unit tests
 
 ## Known Issues
-None open.
-
-## Context Status
-Active — Wave 4 window
+None. Residual note from Codex: session-scoped SQLite engine is fine for serial tests;
+revisit if parallel test execution is added later.
 
 ## Next Step
-Implement Wave 4: app.py (CLI) + full TSD test suite (tests/)
+Production readiness: seed real resume, configure .env with live API keys, run end-to-end.
