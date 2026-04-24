@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Optional
 
 import config
@@ -33,7 +34,10 @@ class VettingService:
 
         logger.info("Vetting %d job(s) (cap=%d)", len(jobs), effective_limit)
         processed = 0
-        for job in jobs:
+        for i, job in enumerate(jobs):
+            if i > 0:
+                # 5s between calls keeps us at ~12 req/min, under the free-tier 15 RPM cap
+                time.sleep(5)
             self._vet_one(job, resume)
             processed += 1
 
