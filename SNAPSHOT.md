@@ -25,10 +25,10 @@ _Generated after Wave 2 — overwrite at end of each module._
 None
 
 ## Current State
-Wave 2 complete (commit: 15eeedb). Awaiting Codex review before push.
+Wave 2 pushed (5a2ac92). Codex PASS.
 
 ## Current Module
 Wave 3 — Vetting Service + Fetcher
 
 ## Next Action
-Codex review Wave 2. On PASS: push. Then implement `services/vetting.py` + `services/fetcher.py`.
+Implement `services/vetting.py` + `services/fetcher.py`

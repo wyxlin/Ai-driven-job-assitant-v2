@@ -4,7 +4,7 @@
 Wave 3 — Vetting Service + Fetcher
 
 ## Status
-Wave 2 COMPLETE (commit: 15eeedb). Awaiting Codex review before push.
+Wave 2 COMPLETE (pushed: 5a2ac92). Codex PASS. Wave 3 not started.
 
 ## Completed Work
 - [x] Directory structure (`core/`, `services/`, `tests/`)
@@ -24,7 +24,7 @@ Wave 2 COMPLETE (commit: 15eeedb). Awaiting Codex review before push.
 None open.
 
 ## Context Status
-Active — Wave 2 window (awaiting Codex verdict)
+Active — Wave 3 window
 
 ## Next Step
-Codex review Wave 2. On PASS: push, then begin Wave 3 (vetting.py + fetcher.py).
+Implement Wave 3: services/vetting.py + services/fetcher.py
