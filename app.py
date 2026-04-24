@@ -1,0 +1,78 @@
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+
+from sqlalchemy import create_engine
+
+import config
+from core.models import init_db
+from services.engine import FilterEngine
+from services.fetcher import ingest_all
+from services.vetting import VettingService
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    stream=sys.stderr,
+)
+
+
+def cmd_fetch(args: argparse.Namespace) -> None:
+    count = ingest_all(args.endpoint)
+    print(f"Ingested {count} job(s).")
+
+
+def cmd_filter(args: argparse.Namespace) -> None:
+    FilterEngine().run_filter_pass()
+    print("Filter pass complete.")
+
+
+def cmd_vet(args: argparse.Namespace) -> None:
+    count = VettingService().process_batch(args.batch_size)
+    print(f"Vetted {count} job(s).")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="app",
+        description="AI-Driven Job Assistant — fetch, filter, and vet job listings.",
+    )
+    parser.add_argument(
+        "--db",
+        default=config.DB_URL,
+        help="SQLAlchemy database URL (default: DATABASE_URL env var)",
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p_fetch = sub.add_parser("fetch", help="Fetch and ingest jobs from source")
+    p_fetch.add_argument("--endpoint", default="", help="Greenhouse/Lever API endpoint")
+    p_fetch.set_defaults(func=cmd_fetch)
+
+    p_filter = sub.add_parser("filter", help="Run location filter pass on unscreened jobs")
+    p_filter.set_defaults(func=cmd_filter)
+
+    p_vet = sub.add_parser("vet", help="Run LLM vetting on filtered jobs")
+    p_vet.add_argument(
+        "--batch-size",
+        type=int,
+        default=config.MAX_JOBS_PER_RUN,
+        dest="batch_size",
+        help=f"Max jobs to vet per run (hard cap: {config.MAX_JOBS_PER_RUN})",
+    )
+    p_vet.set_defaults(func=cmd_vet)
+
+    return parser
+
+
+def main() -> None:
+    parser = build_parser()
+    args = parser.parse_args()
+    engine = create_engine(args.db)
+    init_db(engine)
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
