@@ -7,7 +7,7 @@ import sys
 from sqlalchemy import create_engine
 
 import config
-from core.models import init_db
+from core.models import Resume, get_session, init_db
 from services.engine import FilterEngine
 from services.fetcher import ingest_all
 from services.vetting import VettingService
@@ -32,6 +32,15 @@ def cmd_filter(args: argparse.Namespace) -> None:
 def cmd_vet(args: argparse.Namespace) -> None:
     count = VettingService().process_batch(args.batch_size)
     print(f"Vetted {count} job(s).")
+
+
+def cmd_seed_resume(args: argparse.Namespace) -> None:
+    import json
+    with open(args.file) as f:
+        data = json.load(f)
+    with get_session() as session:
+        session.add(Resume(structured_data=data))
+    print(f"Resume seeded from {args.file}.")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -62,6 +71,10 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Max jobs to vet per run (hard cap: {config.MAX_JOBS_PER_RUN})",
     )
     p_vet.set_defaults(func=cmd_vet)
+
+    p_seed = sub.add_parser("seed-resume", help="Insert resume JSON into the Resume table (run once)")
+    p_seed.add_argument("--file", default="data/resume.json", help="Path to resume JSON file")
+    p_seed.set_defaults(func=cmd_seed_resume)
 
     return parser
 
