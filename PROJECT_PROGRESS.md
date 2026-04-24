@@ -1,10 +1,10 @@
 # Project Progress
 
 ## Current Module
-Wave 1 — Scaffold + Data Layer
+Wave 2 — Filter Engine + LLM Router
 
 ## Status
-REVIEW IN PROGRESS — fixes committed locally, awaiting Codex re-confirmation before push
+Wave 1 COMPLETE (Codex PASS, pushed). Wave 2 not started.
 
 ## Completed Work
 - [x] Directory structure (`core/`, `services/`, `tests/`)
@@ -27,6 +27,4 @@ None open. Three Codex findings resolved:
 Active — Wave 1 window
 
 ## Next Step
-1. Send Codex Round 2 re-review (PROTOCOL.md format)
-2. On PASS: push Wave 1 commits → open Wave 2 window
-3. Wave 2: implement `services/engine.py` + `services/router.py`
+Begin Wave 2: implement `services/engine.py` + `services/router.py` in parallel
