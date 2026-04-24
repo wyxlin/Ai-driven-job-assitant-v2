@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(os.getenv("ENV_FILE", ".env"), override=True)
 
 DB_URL = os.getenv("DATABASE_URL", "sqlite:///./job_assistant.db")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

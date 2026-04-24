@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Generator, List, Optional
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     Enum,
@@ -15,6 +16,7 @@ from sqlalchemy import (
     Text,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -39,12 +41,8 @@ class Base(DeclarativeBase):
 
 
 def _structured_data_column():
-    try:
-        from sqlalchemy.dialects.postgresql import JSONB
-        return mapped_column(JSONB, nullable=True)
-    except ImportError:
-        from sqlalchemy import JSON
-        return mapped_column(JSON, nullable=True)
+    # JSON on SQLite; JSONB on PostgreSQL — resolved at query time, not import time
+    return mapped_column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
 
 
 class Resume(Base):
@@ -145,7 +143,9 @@ def upsert_jobs(data: List[dict]) -> None:
             )
         else:
             from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-            stmt = sqlite_insert(Job).prefix_with("OR IGNORE").values(data)
+            stmt = sqlite_insert(Job).values(data).on_conflict_do_nothing(
+                index_elements=["external_id"]
+            )
         session.execute(stmt)
 
 
