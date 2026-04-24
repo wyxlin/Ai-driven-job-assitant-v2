@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = (
     "Role: Senior Technical Recruiter & AI Infrastructure Expert. "
-    "Evaluate the candidate resume against the job description. "
+    "Evaluate the candidate resume against the job description objectively and technically. "
+    "Use a scoring scale of 1 (no match) to 10 (perfect match). "
+    "Total reasoning must not exceed 2 sentences. "
     "Respond strictly in the requested format."
 )
 
@@ -55,7 +57,7 @@ class LLMRouter:
             try:
                 return call_fn()
             except Exception as exc:
-                if self._is_retriable(exc) and attempt == 0:
+                if self._is_rate_limited(exc) and attempt == 0:
                     logger.warning(
                         "%s attempt 1 failed (%s), retrying after 2s",
                         model_name,
@@ -72,25 +74,15 @@ class LLMRouter:
                 return None
         return None  # unreachable; satisfies type checker
 
-    def _is_retriable(self, exc: Exception) -> bool:
+    def _is_rate_limited(self, exc: Exception) -> bool:
+        # 429 only: retry once after 2s.  500 switches provider immediately (TS-C03).
         try:
-            from google.api_core.exceptions import (
-                InternalServerError as GServerError,
-                ResourceExhausted,
-            )
-            if isinstance(exc, (ResourceExhausted, GServerError)):
+            from google.api_core.exceptions import ResourceExhausted
+            if isinstance(exc, ResourceExhausted):
                 return True
         except ImportError:
             pass
-        return isinstance(
-            exc,
-            (
-                openai.RateLimitError,
-                openai.InternalServerError,
-                anthropic.RateLimitError,
-                anthropic.InternalServerError,
-            ),
-        )
+        return isinstance(exc, (openai.RateLimitError, anthropic.RateLimitError))
 
     def _call_gemini(self, user_content: str) -> str:
         genai.configure(api_key=config.GEMINI_API_KEY)
