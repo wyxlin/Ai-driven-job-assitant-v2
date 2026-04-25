@@ -34,6 +34,24 @@ def cmd_vet(args: argparse.Namespace) -> None:
     print(f"Vetted {count} job(s).")
 
 
+def cmd_export_filtered(args: argparse.Namespace) -> None:
+    import csv
+    with get_session() as session:
+        jobs = (
+            session.query(Job)
+            .filter(Job.is_filtered.is_(True))
+            .order_by(Job.date_posted.desc())
+            .all()
+        )
+    with open(args.out, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["title", "company", "location", "date_posted", "description", "apply_url"])
+        for job in jobs:
+            writer.writerow([job.title, job.company, job.location,
+                             job.date_posted, job.description, job.apply_url])
+    print(f"Exported {len(jobs)} filtered job(s) → {args.out}")
+
+
 def cmd_report(args: argparse.Namespace) -> None:
     import csv
     with get_session() as session:
@@ -90,6 +108,11 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Max jobs to vet per run (hard cap: {config.MAX_JOBS_PER_RUN})",
     )
     p_vet.set_defaults(func=cmd_vet)
+
+    p_export = sub.add_parser("export-filtered", help="Export location+role filtered jobs to CSV (pre-LLM)")
+    p_export.add_argument("--out", default="data/filtered_jobs.csv",
+                          help="Output CSV path (default: data/filtered_jobs.csv)")
+    p_export.set_defaults(func=cmd_export_filtered)
 
     p_report = sub.add_parser("report", help="Export scored jobs to CSV")
     p_report.add_argument("--min-score", type=int, default=5, dest="min_score",
