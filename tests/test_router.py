@@ -19,7 +19,7 @@ class TestTS_C01:
 
         assert result is not None
         assert result["match_score"] == 8
-        assert result["model_used"] == "gemini-2.0-flash"
+        assert result["model_used"] == "gemini-2.5-flash"
         assert "Pros:" in result["reasoning"]
         mock_gemini.assert_called_once()
 

@@ -37,7 +37,7 @@ class LLMRouter:
         user_content = _USER_TEMPLATE.format(resume_json=resume_json, job_desc=job_desc)
 
         providers = [
-            ("gemini-2.0-flash", lambda: self._call_gemini(user_content)),
+            ("gemini-2.5-flash", lambda: self._call_gemini(user_content)),
             ("gpt-4o-mini", lambda: self._call_openai(user_content)),
             ("claude-3-haiku-20240307", lambda: self._call_claude(user_content)),
         ]
@@ -87,7 +87,7 @@ class LLMRouter:
     def _call_gemini(self, user_content: str) -> str:
         genai.configure(api_key=config.GEMINI_API_KEY)
         model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash",
+            model_name="gemini-2.5-flash",
             system_instruction=_SYSTEM_PROMPT,
         )
         response = model.generate_content(user_content)
