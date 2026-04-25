@@ -34,6 +34,15 @@ _US_STATES = frozenset({
     "us", "usa", "united states", "district of columbia", "d.c.",
 })
 
+# Role filter: title must contain at least one allowlist term ...
+_ROLE_ALLOWLIST = frozenset({"engineer", "developer", "swe"})
+
+# ... and must NOT contain any blocklist term (above Senior level)
+_ROLE_BLOCKLIST = frozenset({
+    "staff", "principal", "lead", "director", "manager",
+    "head", "architect", "scientist", "vp", "vice president",
+})
+
 
 def _has_us_remote(lower: str) -> bool:
     """Return True if any semicolon-separated segment is US-based remote."""
@@ -45,7 +54,6 @@ def _has_us_remote(lower: str) -> bool:
             if any(state in qualifier for state in _US_STATES):
                 return True
         elif "remote" in segment:
-            # "Remote" with no country qualifier → US remote
             return True
     return False
 
@@ -59,6 +67,12 @@ class FilterEngine:
             return _has_us_remote(lower)
         return False
 
+    def is_role_match(self, title: str) -> bool:
+        lower = title.lower()
+        if any(blocked in lower for blocked in _ROLE_BLOCKLIST):
+            return False
+        return any(allowed in lower for allowed in _ROLE_ALLOWLIST)
+
     def run_filter_pass(self) -> None:
         with get_session() as session:
             jobs = (
@@ -67,10 +81,10 @@ class FilterEngine:
                 .all()
             )
             for job in jobs:
-                job.is_filtered = self.is_location_match(job.location or "")
+                location_ok = self.is_location_match(job.location or "")
+                role_ok = self.is_role_match(job.title or "")
+                job.is_filtered = location_ok and role_ok
                 logger.debug(
-                    "Job %s location=%r → is_filtered=%s",
-                    job.id,
-                    job.location,
-                    job.is_filtered,
+                    "Job %s title=%r location=%r → is_filtered=%s",
+                    job.id, job.title, job.location, job.is_filtered,
                 )

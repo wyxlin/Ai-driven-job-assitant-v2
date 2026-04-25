@@ -58,6 +58,51 @@ class TestIsLocationMatch:
         ) is True
 
 
+class TestIsRoleMatch:
+    def test_engineer_title_passes(self, engine):
+        assert engine.is_role_match("Software Engineer") is True
+
+    def test_senior_engineer_passes(self, engine):
+        """Senior is NOT in blocklist per user spec."""
+        assert engine.is_role_match("Senior Software Engineer") is True
+
+    def test_swe_passes(self, engine):
+        assert engine.is_role_match("SWE II") is True
+
+    def test_developer_passes(self, engine):
+        assert engine.is_role_match("Backend Developer") is True
+
+    def test_ml_engineer_passes(self, engine):
+        assert engine.is_role_match("ML Engineer") is True
+
+    def test_scientist_blocked(self, engine):
+        assert engine.is_role_match("Data Scientist") is False
+
+    def test_architect_blocked(self, engine):
+        assert engine.is_role_match("Solutions Architect") is False
+
+    def test_staff_engineer_blocked(self, engine):
+        assert engine.is_role_match("Staff Engineer") is False
+
+    def test_principal_engineer_blocked(self, engine):
+        assert engine.is_role_match("Principal Engineer") is False
+
+    def test_engineering_manager_blocked(self, engine):
+        assert engine.is_role_match("Engineering Manager") is False
+
+    def test_director_blocked(self, engine):
+        assert engine.is_role_match("Director of Engineering") is False
+
+    def test_vp_blocked(self, engine):
+        assert engine.is_role_match("VP Engineering") is False
+
+    def test_unrelated_title_fails(self, engine):
+        assert engine.is_role_match("Product Manager") is False
+
+    def test_empty_title_fails(self, engine):
+        assert engine.is_role_match("") is False
+
+
 class TestRunFilterPass:
     def _seed_jobs(self, jobs):
         upsert_jobs(jobs)
