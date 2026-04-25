@@ -7,7 +7,7 @@ import sys
 from sqlalchemy import create_engine
 
 import config
-from core.models import Resume, get_session, init_db
+from core.models import Job, JobEvaluation, Resume, get_session, init_db
 from services.engine import FilterEngine
 from services.fetcher import ingest_all
 from services.vetting import VettingService
@@ -32,6 +32,25 @@ def cmd_filter(args: argparse.Namespace) -> None:
 def cmd_vet(args: argparse.Namespace) -> None:
     count = VettingService().process_batch(args.batch_size)
     print(f"Vetted {count} job(s).")
+
+
+def cmd_report(args: argparse.Namespace) -> None:
+    import csv
+    with get_session() as session:
+        rows = (
+            session.query(Job, JobEvaluation)
+            .join(JobEvaluation, Job.id == JobEvaluation.job_id)
+            .filter(JobEvaluation.match_score >= args.min_score)
+            .order_by(JobEvaluation.match_score.desc())
+            .all()
+        )
+    with open(args.out, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["rank", "score", "title", "company", "location", "reasoning", "apply_url"])
+        for i, (job, ev) in enumerate(rows, 1):
+            writer.writerow([i, ev.match_score, job.title, job.company,
+                             job.location, ev.reasoning, job.apply_url])
+    print(f"Exported {len(rows)} job(s) with score ≥ {args.min_score} → {args.out}")
 
 
 def cmd_seed_resume(args: argparse.Namespace) -> None:
@@ -71,6 +90,13 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Max jobs to vet per run (hard cap: {config.MAX_JOBS_PER_RUN})",
     )
     p_vet.set_defaults(func=cmd_vet)
+
+    p_report = sub.add_parser("report", help="Export scored jobs to CSV")
+    p_report.add_argument("--min-score", type=int, default=5, dest="min_score",
+                          help="Only include jobs at or above this score (default: 5)")
+    p_report.add_argument("--out", default="data/results.csv",
+                          help="Output CSV path (default: data/results.csv)")
+    p_report.set_defaults(func=cmd_report)
 
     p_seed = sub.add_parser("seed-resume", help="Insert resume JSON into the Resume table (run once)")
     p_seed.add_argument("--file", default="data/resume.json", help="Path to resume JSON file")

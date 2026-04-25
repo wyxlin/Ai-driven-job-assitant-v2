@@ -1,104 +1,87 @@
 from __future__ import annotations
 
+import logging
+from html.parser import HTMLParser
 from typing import List
+
+import requests
 
 from core.models import upsert_jobs
 
-# Fixture data simulating Greenhouse / Lever API responses.
-# Mix of Seattle-area, Remote, and out-of-area jobs to exercise the filter.
-_FIXTURE_JOBS: List[dict] = [
-    {
-        "external_id": "gh-001",
-        "title": "Senior Software Engineer, Backend",
-        "company": "Acme Cloud",
-        "location": "Seattle, WA",
-        "description": (
-            "Design and build distributed systems for our cloud platform. "
-            "5+ years Python or Go, strong distributed systems fundamentals, "
-            "experience with Kubernetes and AWS."
-        ),
-        "tech_stack": "Python,Go,Kubernetes,AWS,PostgreSQL",
-        "date_posted": "2026-04-20",
-        "apply_url": "https://acmecloud.example.com/jobs/gh-001",
-    },
-    {
-        "external_id": "gh-002",
-        "title": "Machine Learning Engineer",
-        "company": "Horizon AI",
-        "location": "Bellevue, WA",
-        "description": (
-            "Build and deploy ML pipelines at scale. "
-            "Required: Python, PyTorch or TensorFlow, MLflow, Spark. "
-            "PhD or 3+ years industry ML engineering experience."
-        ),
-        "tech_stack": "Python,PyTorch,TensorFlow,MLflow,Spark",
-        "date_posted": "2026-04-21",
-        "apply_url": "https://horizonai.example.com/jobs/gh-002",
-    },
-    {
-        "external_id": "gh-003",
-        "title": "Staff Software Engineer, Platform",
-        "company": "NovaTech",
-        "location": "Redmond, WA",
-        "description": (
-            "Lead platform reliability and developer tooling. "
-            "8+ years software engineering, expertise in CI/CD, observability, "
-            "and large-scale service meshes."
-        ),
-        "tech_stack": "Go,Terraform,Prometheus,Grafana,Kubernetes",
-        "date_posted": "2026-04-19",
-        "apply_url": "https://novatech.example.com/jobs/gh-003",
-    },
-    {
-        "external_id": "lv-001",
-        "title": "Senior Full-Stack Engineer",
-        "company": "Pixel Labs",
-        "location": "Remote",
-        "description": (
-            "Build product features end-to-end across React frontend and "
-            "Node.js / Python backend. 4+ years full-stack experience, "
-            "comfortable with GraphQL and PostgreSQL."
-        ),
-        "tech_stack": "React,TypeScript,Node.js,Python,GraphQL,PostgreSQL",
-        "date_posted": "2026-04-22",
-        "apply_url": "https://pixellabs.example.com/jobs/lv-001",
-    },
-    {
-        "external_id": "gh-004",
-        "title": "Backend Engineer",
-        "company": "FinStar",
-        "location": "Austin, TX",
-        "description": (
-            "Develop high-throughput financial data pipelines. "
-            "Java or Kotlin, Kafka, strong SQL skills required."
-        ),
-        "tech_stack": "Java,Kotlin,Kafka,PostgreSQL",
-        "date_posted": "2026-04-18",
-        "apply_url": "https://finstar.example.com/jobs/gh-004",
-    },
-    {
-        "external_id": "lv-002",
-        "title": "Software Engineer II",
-        "company": "Metro Systems",
-        "location": "New York, NY",
-        "description": (
-            "Work on core infrastructure for our enterprise SaaS platform. "
-            "3+ years Python or Java, AWS, microservices architecture."
-        ),
-        "tech_stack": "Python,Java,AWS,Docker",
-        "date_posted": "2026-04-17",
-        "apply_url": "https://metrosystems.example.com/jobs/lv-002",
-    },
+logger = logging.getLogger(__name__)
+
+# Companies to pull from Greenhouse. Add/remove slugs freely.
+_GREENHOUSE_SLUGS = [
+    "databricks",    # distributed systems / data engineering
+    "anthropic",     # AI infrastructure
+    "scaleai",       # AI / ML infrastructure
+    "stripe",        # backend / distributed systems
+    "smartsheet",    # Seattle-based, engineering roles
 ]
 
 
+class _HTMLStripper(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self._parts: List[str] = []
+
+    def handle_data(self, data: str) -> None:
+        self._parts.append(data)
+
+    def get_text(self) -> str:
+        return " ".join(self._parts).strip()
+
+
+def _strip_html(html: str) -> str:
+    s = _HTMLStripper()
+    s.feed(html or "")
+    return s.get_text()
+
+
+def _fetch_greenhouse(company_slug: str) -> List[dict]:
+    url = (
+        f"https://boards-api.greenhouse.io/v1/boards/{company_slug}/jobs"
+        "?content=true"
+    )
+    try:
+        resp = requests.get(url, timeout=15)
+    except requests.RequestException as exc:
+        logger.warning("Greenhouse %s request failed: %s", company_slug, exc)
+        return []
+
+    if not resp.ok:
+        logger.warning("Greenhouse %s returned HTTP %s", company_slug, resp.status_code)
+        return []
+
+    jobs = []
+    for item in resp.json().get("jobs", []):
+        location = (item.get("location") or {}).get("name", "")
+        jobs.append({
+            "external_id": f"gh-{item['id']}",
+            "title": item.get("title", ""),
+            "company": company_slug,
+            "location": location,
+            "description": _strip_html(item.get("content", "")),
+            "tech_stack": "",
+            "date_posted": (item.get("updated_at") or "")[:10],
+            "apply_url": item.get("absolute_url", ""),
+        })
+
+    logger.info("Greenhouse %s: fetched %d job(s)", company_slug, len(jobs))
+    return jobs
+
+
 def fetch_raw_jobs(endpoint: str = "") -> List[dict]:
-    """Stub: ignores *endpoint*, returns fixture job records."""
-    return list(_FIXTURE_JOBS)
+    """Fetch jobs from all configured Greenhouse company boards."""
+    all_jobs: List[dict] = []
+    for slug in _GREENHOUSE_SLUGS:
+        all_jobs.extend(_fetch_greenhouse(slug))
+    logger.info("Total fetched: %d job(s) across %d companies", len(all_jobs), len(_GREENHOUSE_SLUGS))
+    return all_jobs
 
 
 def ingest_all(endpoint: str = "") -> int:
-    """Fetch jobs from *endpoint* and persist via upsert. Returns count ingested."""
+    """Fetch and persist all jobs. Returns count ingested."""
     jobs = fetch_raw_jobs(endpoint)
     upsert_jobs(jobs)
     return len(jobs)

@@ -35,6 +35,28 @@ class TestIsLocationMatch:
     def test_empty_string(self, engine):
         assert engine.is_location_match("") is False
 
+    def test_remote_us_state_qualifiers(self, engine):
+        """US-qualified remote positions are in-scope."""
+        assert engine.is_location_match("Remote - California") is True
+        assert engine.is_location_match("Remote - New York") is True
+        assert engine.is_location_match("Remote - Washington") is True
+
+    def test_remote_non_us_excluded(self, engine):
+        """Non-US remote positions must be filtered out."""
+        assert engine.is_location_match("Remote - India") is False
+        assert engine.is_location_match("Remote - Italy") is False
+        assert engine.is_location_match("Remote - Denmark") is False
+
+    def test_remote_non_us_in_multi_location(self, engine):
+        """Multi-location string with only non-US remote → False."""
+        assert engine.is_location_match("Finland; Remote - Denmark; Stockholm, Sweden") is False
+
+    def test_seattle_in_multi_location_wins(self, engine):
+        """Multi-location string containing Seattle → True regardless of other segments."""
+        assert engine.is_location_match(
+            "Austin, Texas; Seattle, Washington; Remote - Denmark"
+        ) is True
+
 
 class TestRunFilterPass:
     def _seed_jobs(self, jobs):
